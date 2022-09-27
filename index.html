@@ -6,9 +6,23 @@
         <script src="statki.js"></script>
         <link rel="stylesheet" href="statki.css" />
     </head>
-    <body onload="newGame();">
-        <div id="game">
-
+    <body onload="newGame();" onkeypress="onKeyPress(event);">
+        <div id="header">
+            Statki
+        </div>
+        <div id="main">
+            <div id="game">
+                
+            </div>
+            <div id="ships">
+                <h2>Dostępne statki</h2>
+                <div class="incenter">
+                    <button id="shipx1" onclick="onShipClick(this, 1)">X1 Zostało: 2</button><br>
+                    <button id="shipx2" onclick="onShipClick(this, 2)">X2 Zostało: 2</button><br>
+                    <button id="shipx3" onclick="onShipClick(this, 3)">X3 Zostało: 2</button><br>
+                    <button id="shipx4" onclick="onShipClick(this, 4)">X4 Zostało: 2</button><br>
+                </div> 
+            </div>
         </div>
     </body>
 </html>

@@ -3,10 +3,56 @@ table,tr,td,th{
     border-collapse: collapse;
     min-width: 25px;
     height: 25px;
+    padding: 0px;
 }
 .water{
     background-color:lightblue;
 }
 .ship{
     background-color: green;
+}
+@keyframes shiphint {
+    0%   {background-color: lightblue;}
+    50%  {background-color: green;}
+    100% {background-color: lightblue;}
+}
+.shiphint{
+    background-color: lightblue;
+    animation-name: shiphint;
+    animation-duration: 400ms;
+    animation-iteration-count: infinite;
+}
+#header{
+    background-color: gray;
+    padding: 8px;
+    text-align: center;
+    font-size: 50px;
+}
+#main{
+    width:fit-content;
+    margin: auto;
+}
+#game{
+    float: left;
+}
+#ships{
+    width: 207px;
+    height: 207px;
+    float: left;
+    border: 1px solid black;
+    text-align: center;
+}
+body{
+    margin: 0px;
+}
+.incenter{
+    width: fit-content;
+    margin: auto;
+}
+button{
+    margin: 2px;
+    padding: 2px;
+}
+.buttonselected{
+    background-color: lightgreen;
 }
