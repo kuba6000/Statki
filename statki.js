@@ -1,8 +1,13 @@
-gameTable = [[],[],[],[],[],[],[],[]];
+const playerTable = [[], [], [], [], [], [], [], []];
+const enemyTable = [[],[],[],[],[],[],[],[]];
+gameStage = 0;
 selectedShip = 0;
 selectedOrientation = 0;
 availableShips = [2,2,2,2];
 currentShipHint = [];
+
+playerWinCounter = 8;
+enemyWinCounter = 8;
 
 class Ship{
     constructor(length, tiles){
@@ -23,29 +28,81 @@ function getTileHTMLElement(x,y){
     return document.getElementById("tilex" + x + "y" + y);
 }
 
+function getEnemyTileHTMLElement(x,y){
+    return document.getElementById("enemytilex" + x + "y" + y);
+}
+
+
 function newGame(){
     gamehtml = document.getElementById("game");
+    enemyGameHTML = document.getElementById("gameenemy");
     var html = "<table>";
+    var htmlenemy = "<table>";
     for (let y = 0; y < 8; y++) {
         html += "<tr>";
+        htmlenemy += "<tr>";
         for (let x = 0; x < 8; x++) {
             html += "<td id='tilex"+x+"y"+y+"' class='water' onclick='onTileClick(this, "+x+", "+y+");' onmouseenter='onTileMouseEnter(this, "+x+", "+y+")'> </td>";
+            htmlenemy += "<td id='enemytilex"+x+"y"+y+"' class='water' onclick='onEnemyTileClick(this, "+x+", "+y+");'> </td>";
         }
         html += "</tr>";
+        htmlenemy += "</tr>";
     }
     html += "</table>";
+    htmlenemy += "</table>";
     gamehtml.innerHTML = html;
+    enemyGameHTML.innerHTML = htmlenemy;
 
+    enemyTableAvailable = [];
     for (let x = 0; x < 8; x++)
-        for (let y = 0; y < 8; y++)
-            gameTable[x][y] = [0, null, getTileHTMLElement(x, y)];
+        for (let y = 0; y < 8; y++){
+            playerTable[x][y] = [0, null, getTileHTMLElement(x, y)];
+            enemyTable[x][y] = [0, null, getEnemyTileHTMLElement(x, y)];
+            enemyTableAvailable[y + (x * 8)] = [x, y, playerTable[x][y]];
+        }
+    var shipsToGenerate = [];
+    var total = 0;
+    for (let i = 0; i < availableShips.length; i++)
+    {
+        shipsToGenerate.push([i+1, availableShips[i]]);
+        total += availableShips[i];
+    }
+    for (let i = 0; i < total; i++)
+    {
+        var iToPlace = Math.floor(Math.random()*shipsToGenerate.length);
+        var shipToPlace = shipsToGenerate[iToPlace];
+        var length = shipToPlace[0];
+        shipToPlace[1]--;
+        if(shipToPlace[1] == 0)
+            shipsToGenerate.splice(iToPlace, 1);
+        var tiles;
+        var tries = 0;
+        do{
+            var randomTile = enemyTableAvailable[Math.floor(Math.random()*enemyTableAvailable.length)];
+            tiles = tryPlaceShip(randomTile[0], randomTile[1], length, Math.floor(Math.random()*2), enemyTable);
+            if(tiles.length == 0) continue;
+            tries = 0;
+            break;
+        } while(++tries < 10000);
+        if(tries >= 10000)
+        {
+            document.body.innerHTML = "<h1>Error</h1>";
+            return;
+        }
+        var ship = new Ship(length, tiles);
+        tiles.forEach(tile => {
+            tile[0] = 1;
+            tile[1] = ship;
+            //tile[2].className = "ship";
+        });
+    }
 }
 
 function isValidTile(x,y){
     return !(x < 0 || x > 7 || y < 0 || y > 7);
 }
 
-function canBeAShipTile(x,y){
+function canBeAShipTile(x,y, gameTable = playerTable){
     if(!isValidTile(x, y))
         return false;
     const alldirs = [[-1,0],[1,0],[0,-1],[0,1]];
@@ -62,7 +119,8 @@ function canBeAShipTile(x,y){
 
 function onTileClick(el, x, y){
     resetHints();
-    var gameTile = gameTable[x][y];
+    if(gameStage != 0) return;
+    var gameTile = playerTable[x][y];
     if(gameTile[0] == 0)
     {
         // Place a ship
@@ -78,8 +136,11 @@ function onTileClick(el, x, y){
         availableShips[selectedShip-1]--;
         shipbutton = document.getElementById("shipx"+selectedShip);
         shipbutton.innerHTML = "X"+selectedShip+" Zostało: "+availableShips[selectedShip-1];
-        if(availableShips[selectedShip-1] == 0)
+        if(availableShips[selectedShip-1] == 0){
             shipbutton.disabled = true;
+            if(availableShips[0] == 0 && availableShips[1] == 0 && availableShips[2] == 0 && availableShips[3] == 0)
+                document.getElementById("startbutton").disabled = false;
+        }
         shipbutton.className = "";
         selectedShip = 0;
         return;
@@ -89,11 +150,83 @@ function onTileClick(el, x, y){
         // Remove ship
         var ship = gameTile[1];
         var tiles = ship.tiles;
+        var length = ship.length;
         tiles.forEach(tile => {
             tile[0] = 0;
             tile[1] = null;
             tile[2].className = "water";
         });
+        shipbutton = document.getElementById("shipx"+length);
+        availableShips[length-1]++;
+        shipbutton.innerHTML = "X"+length+" Zostało: "+availableShips[length-1];
+        shipbutton.disabled = false;
+        document.getElementById("startbutton").disabled = true;
+        return;
+    }
+}
+
+function randomEnemyMove(){
+    setTimeout(() => {
+        var i = Math.floor(Math.random()*enemyTableAvailable.length);
+        var gameTile = enemyTableAvailable[i][2];
+        if(gameTile[0] == 0)
+        {
+            gameTile[2].className = "miss";
+            gameStage = 1;
+            setStatus("Twój ruch", "green");
+            return;
+        }
+        else if(gameTile[0] == 1)
+        {
+            gameTile[2].className = "hit";
+            var ship = gameTile[1];
+            ship.doDamage();
+            if(ship.isDead())
+            {
+                ship.tiles.forEach(tile => {
+                    tile[2].className = "broken";
+                });
+                enemyWinCounter--;
+                if(enemyWinCounter == 0)
+                {
+                    setStatus("Przegrałeś !!", "red");
+                    gameStage = 4;
+                }
+            }
+            randomEnemyMove();
+        }
+    }, 1000+Math.floor(Math.random()*2000));
+}
+
+function onEnemyTileClick(el, x, y){
+    if(gameStage != 1) return;
+    var gameTile = enemyTable[x][y];
+    if(gameTile[2].className != "water") return;
+    if(gameTile[0] == 0)
+    {
+        gameTile[2].className = "miss";
+        gameStage = 2;
+        setStatus("Ruch przeciwnika", "red");
+        randomEnemyMove();
+        return;
+    }
+    else if(gameTile[0] == 1)
+    {
+        gameTile[2].className = "hit";
+        var ship = gameTile[1];
+        ship.doDamage();
+        if(ship.isDead())
+        {
+            ship.tiles.forEach(tile => {
+                tile[2].className = "broken";
+            });
+            playerWinCounter--;
+            if(playerWinCounter == 0)
+            {
+                setStatus("Wygrałeś !!", "green");
+                gameStage = 3;
+            }
+        }
         return;
     }
 }
@@ -114,7 +247,7 @@ function resetHints(){
     currentShipHint = [];
 }
 
-function tryPlaceShip(x, y, length, orientation){
+function tryPlaceShip(x, y, length, orientation, gameTable = playerTable){
     var tilesused = [];
     for(let i = 0; i < length; i++)
     {
@@ -124,7 +257,7 @@ function tryPlaceShip(x, y, length, orientation){
             cy += i;
         else
             cx += i;
-        if(!canBeAShipTile(cx, cy)) return [];
+        if(!canBeAShipTile(cx, cy, gameTable)) return [];
         tilesused.push(gameTable[cx][cy]);
     }
     return tilesused;
@@ -133,7 +266,7 @@ function tryPlaceShip(x, y, length, orientation){
 function onTileMouseEnter(el, x, y){
     resetHints();
     if(selectedShip == 0) return;
-    var gameTile = gameTable[x][y];
+    var gameTile = playerTable[x][y];
     if(gameTile[0] == 0)
     {
         var tiles = tryPlaceShip(x, y, selectedShip, selectedOrientation);
@@ -150,4 +283,15 @@ function onKeyPress(event){
         selectedOrientation = Math.abs(selectedOrientation - 1);
         resetHints();
     }
+}
+
+function onStartClick(el){
+    gameStage = 1;
+    enemyGameHTML.style.visibility = "visible";
+    document.getElementById("ships").style.visibility = "hidden";
+    setStatus("Twój ruch", "green");
+}
+
+function setStatus(status, color = "black"){
+    document.getElementById("status").innerHTML = "<span style='color: "+color+";'>"+status+"</span>";
 }
