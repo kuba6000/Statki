@@ -169,6 +169,7 @@ function randomEnemyMove(){
     setTimeout(() => {
         var i = Math.floor(Math.random()*enemyTableAvailable.length);
         var gameTile = enemyTableAvailable[i][2];
+        enemyTableAvailable.splice(i, 1);
         if(gameTile[0] == 0)
         {
             gameTile[2].className = "miss";
