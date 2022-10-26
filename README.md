@@ -2,7 +2,7 @@
 # https://kuba6000.github.io/Statki/
 
 
-Statki
+Statki 
 Copyright (C) 2022  kuba6000
 
 This program is free software: you can redistribute it and/or modify
