@@ -136,7 +136,7 @@ function isValidTile(x,y){
 
 const allPossibleDirections = [[-1,0],[1,0],[0,-1],[0,1]];
 
-function canBeAShipTile(x,y, gameTable = playerTable){
+function canBeAShipTile(x, y, gameTable = playerTable){
     if(!isValidTile(x, y))
         return false;
     
@@ -146,6 +146,22 @@ function canBeAShipTile(x,y, gameTable = playerTable){
         if(!isValidTile(x + ox, y + oy))
             continue;
         if(gameTable[x+ox][y+oy][0] == 1)
+            return false;
+    };
+    return true;
+}
+
+function canBeAShipTileAICheck(x, y){
+    let gameTable = playerTable;
+    if(!isValidTile(x, y))
+        return false;
+    
+    for(let i = 0; i < allPossibleDirections.length; i++){
+        let ox = allPossibleDirections[i][0];
+        let oy = allPossibleDirections[i][1];
+        if(!isValidTile(x + ox, y + oy))
+            continue;
+        if(gameTable[x+ox][y+oy][2].className == "broken")
             return false;
     };
     return true;
@@ -203,19 +219,21 @@ let AIShipSuggestion = [];
 
 function randomEnemyMove(){
     setTimeout(() => {
-        let i = 0;
-        if(AIShipSuggestion.length == 0)
-            i = Math.floor(Math.random()*enemyTableAvailable.length);
-        else{
-            i = Math.floor(Math.random()*AIShipSuggestion.length);
-            let suggested = getEnemyTableIndex(AIShipSuggestion[i][0], AIShipSuggestion[i][1]);
-            AIShipSuggestion.splice(i, 1);
-            i = suggested;
-        }
-        let gameTile = enemyTableAvailable[i][2];
-        let x = enemyTableAvailable[i][0];
-        let y = enemyTableAvailable[i][1];
-        enemyTableAvailable.splice(i, 1);
+        let i, x, y, gameTile;
+        do{
+            if(AIShipSuggestion.length == 0)
+                i = Math.floor(Math.random()*enemyTableAvailable.length);
+            else{
+                i = Math.floor(Math.random()*AIShipSuggestion.length);
+                let suggested = getEnemyTableIndex(AIShipSuggestion[i][0], AIShipSuggestion[i][1]);
+                AIShipSuggestion.splice(i, 1);
+                i = suggested;
+            }
+            x = enemyTableAvailable[i][0];
+            y = enemyTableAvailable[i][1];
+            gameTile = enemyTableAvailable[i][2];
+            enemyTableAvailable.splice(i, 1);
+        } while(!canBeAShipTileAICheck(x, y));
         if(gameTile[0] == 0)
         {
             gameTile[2].className = "miss";
