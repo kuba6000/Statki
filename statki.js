@@ -1,13 +1,32 @@
-const playerTable = [[], [], [], [], [], [], [], []];
-const enemyTable = [[],[],[],[],[],[],[],[]];
-gameStage = 0;
-selectedShip = 0;
-selectedOrientation = 0;
-availableShips = [2,2,2,2];
-currentShipHint = [];
+/*
+    Statki
+    Copyright (C) 2022  kuba6000
 
-playerWinCounter = 8;
-enemyWinCounter = 8;
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+
+const playerTable = [[], [], [], [], [], [], [], []];
+const enemyTable  = [[], [], [], [], [], [], [], []];
+let gameStage = 0;
+let selectedShip = 0;
+let selectedOrientation = 0;
+let availableShips = [2, 2, 2, 2];
+let currentShipHint = [];
+
+let playerWinCounter = 8;
+let enemyWinCounter = 8;
 
 class Ship{
     constructor(length, tiles){
@@ -33,11 +52,24 @@ function getEnemyTileHTMLElement(x,y){
 }
 
 
+let enemyTableAvailable = [];
+
+function getEnemyTableIndex(x, y){
+    for(let i = 0; i < enemyTableAvailable.length; i++)
+    {
+        if(enemyTableAvailable[i][0] == x && enemyTableAvailable[i][1] == y)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
 function newGame(){
     gamehtml = document.getElementById("game");
     enemyGameHTML = document.getElementById("gameenemy");
-    var html = "<table>";
-    var htmlenemy = "<table>";
+    let html = "<table>";
+    let htmlenemy = "<table>";
     for (let y = 0; y < 8; y++) {
         html += "<tr>";
         htmlenemy += "<tr>";
@@ -60,8 +92,8 @@ function newGame(){
             enemyTable[x][y] = [0, null, getEnemyTileHTMLElement(x, y)];
             enemyTableAvailable[y + (x * 8)] = [x, y, playerTable[x][y]];
         }
-    var shipsToGenerate = [];
-    var total = 0;
+    let shipsToGenerate = [];
+    let total = 0;
     for (let i = 0; i < availableShips.length; i++)
     {
         shipsToGenerate.push([i+1, availableShips[i]]);
@@ -69,16 +101,16 @@ function newGame(){
     }
     for (let i = 0; i < total; i++)
     {
-        var iToPlace = Math.floor(Math.random()*shipsToGenerate.length);
-        var shipToPlace = shipsToGenerate[iToPlace];
-        var length = shipToPlace[0];
+        let iToPlace = Math.floor(Math.random()*shipsToGenerate.length);
+        let shipToPlace = shipsToGenerate[iToPlace];
+        let length = shipToPlace[0];
         shipToPlace[1]--;
         if(shipToPlace[1] == 0)
             shipsToGenerate.splice(iToPlace, 1);
-        var tiles;
-        var tries = 0;
+        let tiles;
+        let tries = 0;
         do{
-            var randomTile = enemyTableAvailable[Math.floor(Math.random()*enemyTableAvailable.length)];
+            let randomTile = enemyTableAvailable[Math.floor(Math.random()*enemyTableAvailable.length)];
             tiles = tryPlaceShip(randomTile[0], randomTile[1], length, Math.floor(Math.random()*2), enemyTable);
             if(tiles.length == 0) continue;
             tries = 0;
@@ -89,7 +121,7 @@ function newGame(){
             document.body.innerHTML = "<h1>Error</h1>";
             return;
         }
-        var ship = new Ship(length, tiles);
+        let ship = new Ship(length, tiles);
         tiles.forEach(tile => {
             tile[0] = 1;
             tile[1] = ship;
@@ -102,13 +134,15 @@ function isValidTile(x,y){
     return !(x < 0 || x > 7 || y < 0 || y > 7);
 }
 
-function canBeAShipTile(x,y, gameTable = playerTable){
+const allPossibleDirections = [[-1,0],[1,0],[0,-1],[0,1]];
+
+function canBeAShipTile(x, y, gameTable = playerTable){
     if(!isValidTile(x, y))
         return false;
-    const alldirs = [[-1,0],[1,0],[0,-1],[0,1]];
-    for(let i = 0; i < alldirs.length; i++){
-        var ox = alldirs[i][0];
-        var oy = alldirs[i][1];
+    
+    for(let i = 0; i < allPossibleDirections.length; i++){
+        let ox = allPossibleDirections[i][0];
+        let oy = allPossibleDirections[i][1];
         if(!isValidTile(x + ox, y + oy))
             continue;
         if(gameTable[x+ox][y+oy][0] == 1)
@@ -117,17 +151,33 @@ function canBeAShipTile(x,y, gameTable = playerTable){
     return true;
 }
 
+function canBeAShipTileAICheck(x, y){
+    let gameTable = playerTable;
+    if(!isValidTile(x, y))
+        return false;
+    
+    for(let i = 0; i < allPossibleDirections.length; i++){
+        let ox = allPossibleDirections[i][0];
+        let oy = allPossibleDirections[i][1];
+        if(!isValidTile(x + ox, y + oy))
+            continue;
+        if(gameTable[x+ox][y+oy][2].className == "broken")
+            return false;
+    };
+    return true;
+}
+
 function onTileClick(el, x, y){
     resetHints();
     if(gameStage != 0) return;
-    var gameTile = playerTable[x][y];
+    let gameTile = playerTable[x][y];
     if(gameTile[0] == 0)
     {
         // Place a ship
         if(selectedShip == 0) return;
-        var tiles = tryPlaceShip(x, y, selectedShip, selectedOrientation);
+        let tiles = tryPlaceShip(x, y, selectedShip, selectedOrientation);
         if(tiles.length == 0) return;
-        var ship = new Ship(selectedShip, tiles);
+        let ship = new Ship(selectedShip, tiles);
         tiles.forEach(tile => {
             tile[0] = 1;
             tile[1] = ship;
@@ -148,9 +198,9 @@ function onTileClick(el, x, y){
     else if(gameTile[0] == 1)
     {
         // Remove ship
-        var ship = gameTile[1];
-        var tiles = ship.tiles;
-        var length = ship.length;
+        let ship = gameTile[1];
+        let tiles = ship.tiles;
+        let length = ship.length;
         tiles.forEach(tile => {
             tile[0] = 0;
             tile[1] = null;
@@ -165,11 +215,25 @@ function onTileClick(el, x, y){
     }
 }
 
+let AIShipSuggestion = [];
+
 function randomEnemyMove(){
     setTimeout(() => {
-        var i = Math.floor(Math.random()*enemyTableAvailable.length);
-        var gameTile = enemyTableAvailable[i][2];
-        enemyTableAvailable.splice(i, 1);
+        let i, x, y, gameTile;
+        do{
+            if(AIShipSuggestion.length == 0)
+                i = Math.floor(Math.random()*enemyTableAvailable.length);
+            else{
+                i = Math.floor(Math.random()*AIShipSuggestion.length);
+                let suggested = getEnemyTableIndex(AIShipSuggestion[i][0], AIShipSuggestion[i][1]);
+                AIShipSuggestion.splice(i, 1);
+                i = suggested;
+            }
+            x = enemyTableAvailable[i][0];
+            y = enemyTableAvailable[i][1];
+            gameTile = enemyTableAvailable[i][2];
+            enemyTableAvailable.splice(i, 1);
+        } while(!canBeAShipTileAICheck(x, y));
         if(gameTile[0] == 0)
         {
             gameTile[2].className = "miss";
@@ -180,8 +244,9 @@ function randomEnemyMove(){
         else if(gameTile[0] == 1)
         {
             gameTile[2].className = "hit";
-            var ship = gameTile[1];
+            let ship = gameTile[1];
             ship.doDamage();
+            AIShipSuggestion = [];
             if(ship.isDead())
             {
                 ship.tiles.forEach(tile => {
@@ -192,7 +257,40 @@ function randomEnemyMove(){
                 {
                     setStatus("Przegrałeś !!", "red");
                     gameStage = 4;
+                    return;
                 }
+            }
+            else{
+                let possibleAISuggestions = [];
+                for(let j = 0; j < allPossibleDirections.length; j++)
+                {
+                    let ox = allPossibleDirections[j][0];
+                    let oy = allPossibleDirections[j][1];
+                    if (!isValidTile(x + ox, y + oy)) continue;
+                    if (playerTable[x + ox][y + oy][2].className == "hit") {
+                        possibleAISuggestions = [];
+                        for(let off = 1; ; off++)
+                        {
+                            if (!isValidTile(x + (ox*off), y + (oy*off))) break;
+                            if (playerTable[x + (ox*off)][y + (oy*off)][2].className == "miss") break;
+                            if (playerTable[x + (ox*off)][y + (oy*off)][2].className == "hit") continue;
+                            possibleAISuggestions.push([x + (ox*off), y + (oy*off)]);
+                            break;
+                        }
+                        for(let off = -1; ; off--)
+                        {
+                            if (!isValidTile(x + (ox*off), y + (oy*off))) break;
+                            if (playerTable[x + (ox*off)][y + (oy*off)][2].className == "miss") break;
+                            if (playerTable[x + (ox*off)][y + (oy*off)][2].className == "hit") continue;
+                            possibleAISuggestions.push([x + (ox*off), y + (oy*off)]);
+                            break;
+                        }
+                        break;
+                    }
+                    else if(playerTable[x + ox][y + oy][2].className != "miss")
+                        possibleAISuggestions.push([x + ox, y + oy]);
+                }
+                AIShipSuggestion = possibleAISuggestions;
             }
             randomEnemyMove();
         }
@@ -201,7 +299,7 @@ function randomEnemyMove(){
 
 function onEnemyTileClick(el, x, y){
     if(gameStage != 1) return;
-    var gameTile = enemyTable[x][y];
+    let gameTile = enemyTable[x][y];
     if(gameTile[2].className != "water") return;
     if(gameTile[0] == 0)
     {
@@ -214,7 +312,7 @@ function onEnemyTileClick(el, x, y){
     else if(gameTile[0] == 1)
     {
         gameTile[2].className = "hit";
-        var ship = gameTile[1];
+        let ship = gameTile[1];
         ship.doDamage();
         if(ship.isDead())
         {
@@ -249,11 +347,11 @@ function resetHints(){
 }
 
 function tryPlaceShip(x, y, length, orientation, gameTable = playerTable){
-    var tilesused = [];
+    let tilesused = [];
     for(let i = 0; i < length; i++)
     {
-        var cx = x;
-        var cy = y;
+        let cx = x;
+        let cy = y;
         if(orientation == 1)
             cy += i;
         else
@@ -267,10 +365,10 @@ function tryPlaceShip(x, y, length, orientation, gameTable = playerTable){
 function onTileMouseEnter(el, x, y){
     resetHints();
     if(selectedShip == 0) return;
-    var gameTile = playerTable[x][y];
+    let gameTile = playerTable[x][y];
     if(gameTile[0] == 0)
     {
-        var tiles = tryPlaceShip(x, y, selectedShip, selectedOrientation);
+        let tiles = tryPlaceShip(x, y, selectedShip, selectedOrientation);
         tiles.forEach(tile => {
             currentShipHint.push(tile[2]);
             tile[2].className = "shiphint";
